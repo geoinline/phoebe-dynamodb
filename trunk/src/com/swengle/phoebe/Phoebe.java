@@ -10,11 +10,13 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import com.amazonaws.ClientConfiguration;
+import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.services.dynamodb.AmazonDynamoDB;
 import com.amazonaws.services.dynamodb.AmazonDynamoDBClient;
 import com.amazonaws.services.dynamodb.datamodeling.DynamoDBMapper;
 import com.amazonaws.services.dynamodb.model.AttributeValue;
+import com.swengle.phoebe.auth.STSSessionCredentialsProviderWithClientConfiguration;
 import com.swengle.phoebe.datastore.AsyncDatastore;
 import com.swengle.phoebe.datastore.AsyncDatastoreImpl;
 import com.swengle.phoebe.datastore.Datastore;
@@ -38,6 +40,28 @@ public class Phoebe {
 	private AsyncDatastore asyncDatastore;
 	private Datastore consistentReadDatastore;
 	private AsyncDatastore consistentReadAsyncDatastore;
+	
+	/**
+	 * 
+	 */
+	public Phoebe(AWSCredentials awsCredentials) {
+        this(awsCredentials, new ClientConfiguration());
+    }
+	
+	/**
+	 * 
+	 */
+	public Phoebe(AWSCredentials awsCredentials, ClientConfiguration clientConfiguration) {
+		this(new STSSessionCredentialsProviderWithClientConfiguration(
+				awsCredentials, clientConfiguration), clientConfiguration);
+    }
+	
+	/**
+	 * 
+	 */
+	public Phoebe(AWSCredentialsProvider awsCredentialsProvider) {
+		this(awsCredentialsProvider, new ClientConfiguration());
+	}
 
 	/**
 	 * 
@@ -45,7 +69,7 @@ public class Phoebe {
 	public Phoebe(AWSCredentialsProvider awsCredentialsProvider,
 			ClientConfiguration clientConfiguration) {
 		client = new AmazonDynamoDBClient(awsCredentialsProvider,
-				clientConfiguration);
+					clientConfiguration);
 		mapper = new DynamoDBMapper(client);
 		executorService = Executors.newCachedThreadPool();
 		asyncDatastore = new AsyncDatastoreImpl(this);

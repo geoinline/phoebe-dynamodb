@@ -42,14 +42,9 @@ public class TestBase {
 	
 	@BeforeClass
 	public static void setUpTables() throws IOException {
-		ClientConfiguration clientConfiguration = new ClientConfiguration();
-		clientConfiguration.setProxyHost("proxylan");
-		clientConfiguration.setProxyPort(8080);
 		AWSCredentials credentials = new PropertiesCredentials(
 				TestBase.class.getClassLoader().getResourceAsStream("AwsCredentials.properties"));
-		STSSessionCredentialsProviderWithClientConfiguration stsProvider = new STSSessionCredentialsProviderWithClientConfiguration(
-				credentials, clientConfiguration);
-		PHOEBE = new Phoebe(stsProvider, clientConfiguration);
+		PHOEBE = new Phoebe(credentials);
 		PHOEBE.getClient().setEndpoint(
 				"http://dynamodb.us-east-1.amazonaws.com");
 		createTestTables();
