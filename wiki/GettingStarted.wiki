@@ -63,7 +63,7 @@ Then if a car already exists with the same key a `DuplicateEntityException` will
 
 Of course there's always the need to save more than one entity at a time:
 {{{
-phoebe.getDatastore().insert(Arrays.asList(car1, car2. car3));
+phoebe.getDatastore().insert(Arrays.asList(car1, car2, car3));
 }}}
 
 === Get (Read) ===
