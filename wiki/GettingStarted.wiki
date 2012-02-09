@@ -15,8 +15,8 @@ Phoebe phoebe = new Phoebe(awsCredentials);
 
 
 == Keys ==
-All entities stored in DynamoDB have either the equivalent of a PrimaryKey (known as a HashKey) (which can be a string or a number) or a CompositeKey (a combination of a HashKey and a RangeKey).
-The native AWS Key class is simple and untyped. Phoebe provides a generified EntityKey that carries type information:
+All entities stored in DynamoDB have either the equivalent of a !PrimaryKey (known as a !HashKey) (which can be a string or a number) or a !CompositeKey (a combination of a !HashKey and a !RangeKey).
+The native AWS Key class is simple and untyped. Phoebe provides a generified `EntityKey` that carries type information:
 
 
 {{{
