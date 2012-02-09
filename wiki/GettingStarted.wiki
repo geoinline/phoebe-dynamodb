@@ -24,7 +24,7 @@ EntityKey<Car> keyWithHash = EntityKey.create(Car.class, "Ford");
 EntityKey<Car> keyWithRange = EntityKey.create(Car.class, "Ford", "Mustang");
 }}}
 
-These EntityKeys are the key (pun-intended) to all operations in Phoebe.
+These `EntityKey`s are the key (pun-intended) to all operations in Phoebe.
 
 == Phoebe's datastores ==
 Phoebe provides four types of datastores to perform your operations:
