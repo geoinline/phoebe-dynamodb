@@ -1,0 +1,12 @@
+com.swengle.phoebe
+com.swengle.phoebe.auth
+com.swengle.phoebe.concurrent
+com.swengle.phoebe.concurrent.util
+com.swengle.phoebe.datastore
+com.swengle.phoebe.key
+com.swengle.phoebe.query
+com.swengle.phoebe.reflect
+com.swengle.phoebe.result
+com.swengle.phoebe.test
+com.swengle.phoebe.test.model
+org.bson.types
