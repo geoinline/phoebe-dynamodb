@@ -169,7 +169,7 @@ Again we can update multiple entities using:
 === Query ===
 There are two types of queries Phoebe can perform (more will follow).
 
-ScanQuery
+*!ScanQuery*
 
 {{{
 ScanQuery<Car> scanQuery = phoebe.createScanQuery(Car.class);
@@ -180,7 +180,7 @@ List<Car> redCars = scanQuery.asList();
 
 A `ScanQuery` is an expensive query and should probably only be done on tables that you know are small.
 
-RangeQuery
+*!RangeQuery*
 
 Fairly similar to a `ScanQuery`
 
@@ -194,7 +194,7 @@ List<CarModel> carsSince1995 = rangeQuery.asList();
 In this case we are going to look for all `CarModel` entities with a hashKey of "Ford" and a rangeKey greater than 1995. So if we were to store a `CarModel` entity for all cars made by Ford with the year they were released in the rangeKey (probably more something like YEAR-MODEL#) we can easily find those models using the rangeKey to filter by year of release.
 
 
-=== HashKeyRangeKeyResolver ===
+=== !HashKeyRangeKeyResolver ===
 
 So what the heck is this `HashKeyRangeKeyResolver` thing? It can be cumbersome to always need to pass two parts of a composite key (an entity with a hashKey and rangeKey). If you are developing a web app you would probably want to represent the key as a single string. The `HashKeyRangeKeyResolver` provides the following interface:
 
