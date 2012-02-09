@@ -13,7 +13,6 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 
 import com.amazonaws.AmazonServiceException;
-import com.amazonaws.ClientConfiguration;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.PropertiesCredentials;
 import com.amazonaws.services.dynamodb.model.CreateTableRequest;
@@ -25,7 +24,6 @@ import com.amazonaws.services.dynamodb.model.ProvisionedThroughput;
 import com.amazonaws.services.dynamodb.model.TableDescription;
 import com.amazonaws.services.dynamodb.model.TableStatus;
 import com.swengle.phoebe.Phoebe;
-import com.swengle.phoebe.auth.STSSessionCredentialsProviderWithClientConfiguration;
 import com.swengle.phoebe.key.EntityKey;
 import com.swengle.phoebe.reflect.DynamoDBReflector;
 import com.swengle.phoebe.test.model.ObjectWithHashKey;
