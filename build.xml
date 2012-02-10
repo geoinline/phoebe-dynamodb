@@ -1,0 +1,79 @@
+<?xml version="1.0"?>
+<project name="Phoebe" default="all" basedir=".">
+    <description>
+        This is the build script for the Phoebe library. The default
+        target compiles the sources, creates a .jar file of the resulting
+        class files, then creates an installation package suitable for
+        deployment.
+
+        Copyright © 2012, Swengle. All rights reserved.
+    </description>
+
+
+    <!-- Properties used throughout this script. -->
+    <!-- important folders -->
+    <property name="src"        location="src"/>
+    <property name="bin"        location="bin"/>
+    <property name="dist"       location="dist"/>
+	<property name="lib"        location="lib"/>
+
+
+    <!-- classpath used for building this library -->
+    <path id="phoebe.build.path">
+        <pathelement location="${lib}/aws-java-sdk-1.3.0.jar"/>
+    	<pathelement location="${lib}/commons-lang3-3.1/commons-lang3-3.1.jar"/>
+    </path>
+
+
+    <!--
+        This target builds the Phoebe library from scratch.
+    -->
+    <target name="all" depends="dist, build, jar">
+    </target>
+
+    <target name="dist">
+        <mkdir dir="${dist}"/>
+    </target>
+
+    <!--
+        This target cleans out all built files, leaving a source-only
+        installation.
+    -->
+    <target name="clean">
+        <delete dir="${bin}"/>
+        <delete dir="${dist}"/>
+    </target>
+
+    <!--
+        This target compiles all of the sources for the Phoebe library
+        into their corresponding .class files. The class files are built in a
+        separate "bin" folder which may be safely removed at any time.
+    -->
+    <target name="build">
+        <!-- make sure we have a "bin" folder to put the .class files into -->
+        <mkdir dir="${bin}"/>
+
+        <!-- remove out-of-date .class files -->
+        <depend srcdir="${src}" destdir="${bin}">
+            <classpath refid="phoebe.build.path"/>
+        </depend>
+
+        <!-- build our .class files -->
+        <javac srcdir="${src}" destdir="${bin}" debug="on">
+            <classpath refid="phoebe.build.path"/>
+        </javac>
+
+    </target>
+
+
+    <!--
+        This target builds the .jar file containing the Phoebe library.
+    -->
+    <target name="jar" depends="build">
+        <jar destfile="${dist}/phoebe.jar"
+    	     basedir="${bin}"
+        	 includes="**/*.*"/>
+    </target>
+
+
+</project>
