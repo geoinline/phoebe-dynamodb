@@ -13,6 +13,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 
 import com.amazonaws.AmazonServiceException;
+import com.amazonaws.ClientConfiguration;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.PropertiesCredentials;
 import com.amazonaws.services.dynamodb.model.CreateTableRequest;
@@ -26,8 +27,9 @@ import com.amazonaws.services.dynamodb.model.TableStatus;
 import com.swengle.phoebe.Phoebe;
 import com.swengle.phoebe.key.EntityKey;
 import com.swengle.phoebe.reflect.DynamoDBReflector;
-import com.swengle.phoebe.test.model.ObjectWithHashKey;
-import com.swengle.phoebe.test.model.ObjectWithHashKeyAndRangeKey;
+import com.swengle.phoebe.test.model.EntityWithJustHashKey;
+import com.swengle.phoebe.test.model.EntityWithJustHashKeyAndJustRangeKey;
+
 
 /**
  * @author Administrator
@@ -40,9 +42,10 @@ public class TestBase {
 	
 	@BeforeClass
 	public static void setUpTables() throws IOException {
+		ClientConfiguration clientConfiguration = new ClientConfiguration();
 		AWSCredentials credentials = new PropertiesCredentials(
 				TestBase.class.getClassLoader().getResourceAsStream("AwsCredentials.properties"));
-		PHOEBE = new Phoebe(credentials);
+		PHOEBE = new Phoebe(credentials, clientConfiguration);
 		PHOEBE.getClient().setEndpoint(
 				"http://dynamodb.us-east-1.amazonaws.com");
 		createTestTables();
@@ -54,31 +57,31 @@ public class TestBase {
 	}
 	
 	protected void emptyAll() {
-		empty(ObjectWithHashKey.class);
-		empty(ObjectWithHashKeyAndRangeKey.class);
+		empty(EntityWithJustHashKey.class);
+		empty(EntityWithJustHashKeyAndJustRangeKey.class);
 	}
 
 	@SuppressWarnings("unused")
 	private void deleteTestTables() {
-		deleteTable(DynamoDBReflector.INSTANCE.getTable(ObjectWithHashKey.class).tableName());
-		deleteTable(DynamoDBReflector.INSTANCE.getTable(ObjectWithHashKeyAndRangeKey.class).tableName());
+		deleteTable(DynamoDBReflector.INSTANCE.getTable(EntityWithJustHashKey.class).tableName());
+		deleteTable(DynamoDBReflector.INSTANCE.getTable(EntityWithJustHashKeyAndJustRangeKey.class).tableName());
 	}
 
 
 	private static void createTestTables() {
-		Method getter = DynamoDBReflector.INSTANCE.getHashKeyGetter(ObjectWithHashKey.class);
-		String objectWithHashKeyAttrName = DynamoDBReflector.INSTANCE.getAttributeName(getter);
-		getter = DynamoDBReflector.INSTANCE.getHashKeyGetter(ObjectWithHashKeyAndRangeKey.class);
-		String objectWithHashKeyAndRangeKeyHashAttrName = DynamoDBReflector.INSTANCE.getAttributeName(getter);
-		getter = DynamoDBReflector.INSTANCE.getRangeKeyGetter(ObjectWithHashKeyAndRangeKey.class);
-		String objectWithHashKeyAndRangeKeyRangeAttrName = DynamoDBReflector.INSTANCE.getAttributeName(getter);
+		Method getter = DynamoDBReflector.INSTANCE.getHashKeyGetter(EntityWithJustHashKey.class);
+		String entityWithHashKeyAttrName = DynamoDBReflector.INSTANCE.getAttributeName(getter);
+		getter = DynamoDBReflector.INSTANCE.getHashKeyGetter(EntityWithJustHashKeyAndJustRangeKey.class);
+		String entityWithHashKeyAndRangeKeyHashAttrName = DynamoDBReflector.INSTANCE.getAttributeName(getter);
+		getter = DynamoDBReflector.INSTANCE.getRangeKeyGetter(EntityWithJustHashKeyAndJustRangeKey.class);
+		String entityWithHashKeyAndRangeKeyRangeAttrName = DynamoDBReflector.INSTANCE.getAttributeName(getter);
 		
 		
-		createTable(ObjectWithHashKey.class, 128L, 128L,
-				objectWithHashKeyAttrName, "S");
-		createTable(ObjectWithHashKeyAndRangeKey.class, 128L, 128L,
-				objectWithHashKeyAndRangeKeyHashAttrName, "S",
-				objectWithHashKeyAndRangeKeyRangeAttrName, "S");
+		createTable(EntityWithJustHashKey.class, 128L, 128L,
+				entityWithHashKeyAttrName, "S");
+		createTable(EntityWithJustHashKeyAndJustRangeKey.class, 128L, 128L,
+				entityWithHashKeyAndRangeKeyHashAttrName, "S",
+				entityWithHashKeyAndRangeKeyRangeAttrName, "S");
 	}
 	
 	private void deleteTable(String tableName) {
