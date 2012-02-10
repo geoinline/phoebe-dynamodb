@@ -100,6 +100,7 @@ public class AsyncDatastoreImpl implements AsyncDatastore {
 
 	private <T extends Object> void create(T object, boolean insert) {
 		Map<String, AttributeValueUpdate> updateValues = new HashMap<String, AttributeValueUpdate>();
+		Map<String, AttributeValueUpdate> keyUpdateValues = new HashMap<String, AttributeValueUpdate>();
 		Map<String, ExpectedAttributeValue> expectedValues = new HashMap<String, ExpectedAttributeValue>();
 		List<ValueUpdate> inMemoryUpdates = new LinkedList<ValueUpdate>();
 
@@ -140,6 +141,10 @@ public class AsyncDatastoreImpl implements AsyncDatastore {
 					updateValues.put(attributeName, new AttributeValueUpdate().withValue(DynamoDBReflector.INSTANCE
 							.getSimpleAttributeValue(method, getterResult))
                             .withAction("PUT"));
+				} else {
+					keyUpdateValues.put(attributeName, new AttributeValueUpdate().withValue(DynamoDBReflector.INSTANCE
+							.getSimpleAttributeValue(method, getterResult))
+                            .withAction("PUT"));
 				}
 				hashKeyElement = DynamoDBReflector.INSTANCE.getHashKeyElement(
 						getterResult, hashKeyGetter);
@@ -159,6 +164,10 @@ public class AsyncDatastoreImpl implements AsyncDatastore {
 							newVersionValue));
 				} else if (insert) {
 					updateValues.put(attributeName, new AttributeValueUpdate().withValue(DynamoDBReflector.INSTANCE
+							.getSimpleAttributeValue(method, getterResult))
+                            .withAction("PUT"));
+				} else {
+					keyUpdateValues.put(attributeName, new AttributeValueUpdate().withValue(DynamoDBReflector.INSTANCE
 							.getSimpleAttributeValue(method, getterResult))
                             .withAction("PUT"));
 				}
@@ -198,10 +207,15 @@ public class AsyncDatastoreImpl implements AsyncDatastore {
 		Key objectKey = new Key().withHashKeyElement(hashKeyElement)
 				.withRangeKeyElement(rangeKeyElement);
 
-		if (insert) {
-			expectedValues.put(
-					DynamoDBReflector.INSTANCE.getAttributeName(hashKeyGetter),
-					new ExpectedAttributeValue().withExists(false));
+		
+		if (insert || updateValues.isEmpty()) {
+			if (insert) {
+				expectedValues.put(
+						DynamoDBReflector.INSTANCE.getAttributeName(hashKeyGetter),
+						new ExpectedAttributeValue().withExists(false));
+			} else {
+				updateValues = keyUpdateValues;
+			}
 			try {
 				phoebe.getClient().putItem(
 						new PutItemRequest().withTableName(tableName)
