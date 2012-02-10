@@ -7,7 +7,7 @@
 To make things as compatible with Amazons AWS library annotations remain the same as shown <a href="http://docs.amazonwebservices.com/amazondynamodb/latest/developerguide/JavaSDKHighLevel.html#JavaDeclarativeTagsList">here</a>. We could have chosen to implement our own annotations (it would have been preferable to annotate the member fields rather that the getters) but we felt that it was better to be consistent at this time.
 
 == Starting things up ==
-As a best practice, your applications should create one Phoebe and reuse the it between threads.
+As a best practice, your applications should create one Phoebe and reuse it between threads.
 
 {{{
 Phoebe phoebe = new Phoebe(awsCredentials);
