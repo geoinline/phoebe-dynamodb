@@ -357,22 +357,22 @@ public class AsyncDatastoreImpl implements AsyncDatastore {
 	 */
 	@Override
 	public <T> FutureResult<Iterable<DeleteResult<T>>> delete(
-			final Iterable<EntityKey<T>> entityKeys) {
+			final Iterable<? extends EntityKey<? extends T>> entityKeys) {
 		return new FutureResultAdapter<Iterable<DeleteResult<T>>>(phoebe
 				.getExecutorService().submit(
 						new Callable<Iterable<DeleteResult<T>>>() {
 							@Override
 							public Iterable<DeleteResult<T>> call()
 									throws Exception {
-								Map<EntityKey<T>, FutureResult<Void>> futureResultMap = new HashMap<EntityKey<T>, FutureResult<Void>>();
-								for (EntityKey<T> entityKey : entityKeys) {
+								Map<EntityKey<? extends T>, FutureResult<Void>> futureResultMap = new HashMap<EntityKey<? extends T>, FutureResult<Void>>();
+								for (EntityKey<? extends T> entityKey : entityKeys) {
 									futureResultMap.put(entityKey,
 											delete(entityKey));
 								}
 								List<DeleteResult<T>> result = new ArrayList<DeleteResult<T>>();
 								// wait for all tasks to complete before
 								// continuing
-								for (Entry<EntityKey<T>, FutureResult<Void>> entry : futureResultMap
+								for (Entry<EntityKey<? extends T>, FutureResult<Void>> entry : futureResultMap
 										.entrySet()) {
 									DeleteResult<T> deleteResult = new DeleteResult<T>(
 											entry.getKey());

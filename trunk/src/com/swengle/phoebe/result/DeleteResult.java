@@ -10,13 +10,13 @@ import com.swengle.phoebe.key.EntityKey;
  *
  */
 public class DeleteResult<T> {
-	private EntityKey<T> entityKey;
+	private EntityKey<? extends T> entityKey;
 	private Exception exception;
 	
 	/**
 	 * Create a new DeleteResult object
 	 */
-	public DeleteResult(EntityKey<T> entityKey) {
+	public DeleteResult(EntityKey<? extends T> entityKey) {
 		this.entityKey = entityKey;
 	}
 
@@ -37,14 +37,14 @@ public class DeleteResult<T> {
 	/**
 	 * @return the entityKey
 	 */
-	public EntityKey<T> getEntityKey() {
+	public EntityKey<? extends T> getEntityKey() {
 		return entityKey;
 	}
 
 	/**
 	 * @param entityKey the entityKey to set
 	 */
-	public void setEntityKey(EntityKey<T> entityKey) {
+	public void setEntityKey(EntityKey<? extends T> entityKey) {
 		this.entityKey = entityKey;
 	}
 	
