@@ -16,7 +16,8 @@ import org.junit.Test;
 
 import com.swengle.phoebe.Phoebe;
 import com.swengle.phoebe.query.ScanQuery;
-import com.swengle.phoebe.test.model.ObjectWithHashKeyAndRangeKey;
+import com.swengle.phoebe.test.model.EntityWithHashKeyAndRangeKey;
+
 
 /**
  * @author Administrator
@@ -33,26 +34,25 @@ public class TestScanQuery extends TestBase {
 		String bottomObjectId = new ObjectId().toString();
 		
 		// object 1
-		ObjectWithHashKeyAndRangeKey obj = new ObjectWithHashKeyAndRangeKey();
-		obj.setId("FilterTest");
-		obj.setRangeId(topObjectId);
-		obj.setFoo("foobar");
-		obj.setBar(topObjectId);
+		EntityWithHashKeyAndRangeKey obj = new EntityWithHashKeyAndRangeKey();
+		obj.setHashKey("ScanTest");
+		obj.setRangeKey(topObjectId);
+		obj.setString(topObjectId);
 		phoebe.getDatastore().put(obj);
 		
 		// object 2
-		obj.setRangeId(middleObjectId);
-		obj.setBar(middleObjectId);
+		obj.setRangeKey(middleObjectId);
+		obj.setString(middleObjectId);
 		phoebe.getDatastore().put(obj);
 		
 		// object 3
-		obj.setRangeId(bottomObjectId);
-		obj.setBar(bottomObjectId);
+		obj.setRangeKey(bottomObjectId);
+		obj.setString(bottomObjectId);
 		phoebe.getDatastore().put(obj);
 		
 		// object 4
-		obj.setRangeId(new ObjectId().toString());
-		obj.setBar(null);
+		obj.setRangeKey(new ObjectId().toString());
+		obj.setString(null);
 		Set<String> set = new HashSet<String>();
 		set.add("A");
 		set.add("B");
@@ -61,83 +61,83 @@ public class TestScanQuery extends TestBase {
 		phoebe.getDatastore().put(obj);
 		
 		// object 5
-		obj.setRangeId(new ObjectId().toString());
-		obj.setBar(null);
+		obj.setRangeKey(new ObjectId().toString());
+		obj.setString(null);
 		obj.getSet().remove("B");
 		phoebe.getDatastore().put(obj);
 		
-		ScanQuery<ObjectWithHashKeyAndRangeKey> query = phoebe.createScanQuery(ObjectWithHashKeyAndRangeKey.class);
+		ScanQuery<EntityWithHashKeyAndRangeKey> query = phoebe.createScanQuery(EntityWithHashKeyAndRangeKey.class);
 		Assert.assertTrue(query.count() == 5);
 		
-		query = phoebe.createScanQuery(ObjectWithHashKeyAndRangeKey.class);
-		query.withExclusiveStartKey().equal("FilterTest", middleObjectId);
+		query = phoebe.createScanQuery(EntityWithHashKeyAndRangeKey.class);
+		query.withExclusiveStartKey().equal("ScanTest", middleObjectId);
 		Assert.assertTrue(query.count() == 3);
 		
-		query = phoebe.createScanQuery(ObjectWithHashKeyAndRangeKey.class);
-		query.field("bar").greaterThan(topObjectId);
+		query = phoebe.createScanQuery(EntityWithHashKeyAndRangeKey.class);
+		query.field("string").greaterThan(topObjectId);
 		Assert.assertTrue(query.count() == 2);
 
-		query = phoebe.createScanQuery(ObjectWithHashKeyAndRangeKey.class);
-		query.field("bar").greaterThanOrEq(topObjectId);
+		query = phoebe.createScanQuery(EntityWithHashKeyAndRangeKey.class);
+		query.field("string").greaterThanOrEq(topObjectId);
 		Assert.assertTrue(query.count() == 3);
 		
-		query = phoebe.createScanQuery(ObjectWithHashKeyAndRangeKey.class);
-		query.field("bar").lessThan(bottomObjectId);
+		query = phoebe.createScanQuery(EntityWithHashKeyAndRangeKey.class);
+		query.field("string").lessThan(bottomObjectId);
 		Assert.assertTrue(query.count() == 2);
 		
-		query = phoebe.createScanQuery(ObjectWithHashKeyAndRangeKey.class);
-		query.field("bar").lessThanOrEq(bottomObjectId);
+		query = phoebe.createScanQuery(EntityWithHashKeyAndRangeKey.class);
+		query.field("string").lessThanOrEq(bottomObjectId);
 		Assert.assertTrue(query.count() == 3);
 		
-		query = phoebe.createScanQuery(ObjectWithHashKeyAndRangeKey.class);
-		query.field("bar").equal(bottomObjectId);
+		query = phoebe.createScanQuery(EntityWithHashKeyAndRangeKey.class);
+		query.field("string").equal(bottomObjectId);
 		Assert.assertTrue(query.count() == 1);
 		
-		query = phoebe.createScanQuery(ObjectWithHashKeyAndRangeKey.class);
-		query.field("bar").notEqual(bottomObjectId);
+		query = phoebe.createScanQuery(EntityWithHashKeyAndRangeKey.class);
+		query.field("string").notEqual(bottomObjectId);
 		Assert.assertTrue(query.count() == 4);
 		
-		query = phoebe.createScanQuery(ObjectWithHashKeyAndRangeKey.class);
-		query.field("bar").between(topObjectId, bottomObjectId);
+		query = phoebe.createScanQuery(EntityWithHashKeyAndRangeKey.class);
+		query.field("string").between(topObjectId, bottomObjectId);
 		Assert.assertTrue(query.count() == 3);
 		
-		query = phoebe.createScanQuery(ObjectWithHashKeyAndRangeKey.class);
-		query.field("bar").equal(topObjectId).field("rangeId").equal(topObjectId);
+		query = phoebe.createScanQuery(EntityWithHashKeyAndRangeKey.class);
+		query.field("string").equal(topObjectId).field("rangeKey").equal(topObjectId);
 		Assert.assertTrue(query.count() == 1);
 		
-		query = phoebe.createScanQuery(ObjectWithHashKeyAndRangeKey.class);
-		query.field("bar").equal(topObjectId).field("rangeId").greaterThan(topObjectId);
+		query = phoebe.createScanQuery(EntityWithHashKeyAndRangeKey.class);
+		query.field("string").equal(topObjectId).field("rangeKey").greaterThan(topObjectId);
 		Assert.assertTrue(query.count() == 0);
 		
-		query = phoebe.createScanQuery(ObjectWithHashKeyAndRangeKey.class);
-		query.field("bar").equal(topObjectId).field("rangeId").greaterThanOrEq(topObjectId);
+		query = phoebe.createScanQuery(EntityWithHashKeyAndRangeKey.class);
+		query.field("string").equal(topObjectId).field("rangeKey").greaterThanOrEq(topObjectId);
 		Assert.assertTrue(query.count() == 1);
 		
-		query = phoebe.createScanQuery(ObjectWithHashKeyAndRangeKey.class);
-		query.field("bar").isNull();
+		query = phoebe.createScanQuery(EntityWithHashKeyAndRangeKey.class);
+		query.field("string").isNull();
 		Assert.assertTrue(query.count() == 2);
 		
-		query = phoebe.createScanQuery(ObjectWithHashKeyAndRangeKey.class);
-		query.field("bar").isNotNull();
+		query = phoebe.createScanQuery(EntityWithHashKeyAndRangeKey.class);
+		query.field("string").isNotNull();
 		Assert.assertTrue(query.count() == 3);
 		
-		query = phoebe.createScanQuery(ObjectWithHashKeyAndRangeKey.class);
-		query.field("bar").in(Arrays.asList(topObjectId, middleObjectId));
+		query = phoebe.createScanQuery(EntityWithHashKeyAndRangeKey.class);
+		query.field("string").in(Arrays.asList(topObjectId, middleObjectId));
 		Assert.assertTrue(query.count() == 2);
 		
-		query = phoebe.createScanQuery(ObjectWithHashKeyAndRangeKey.class);
-		query.field("bar").contains(topObjectId);
+		query = phoebe.createScanQuery(EntityWithHashKeyAndRangeKey.class);
+		query.field("string").contains(topObjectId);
 		Assert.assertTrue(query.count() == 1);
 		
-		query = phoebe.createScanQuery(ObjectWithHashKeyAndRangeKey.class);
-		query.field("bar").notContains(topObjectId);
+		query = phoebe.createScanQuery(EntityWithHashKeyAndRangeKey.class);
+		query.field("string").notContains(topObjectId);
 		Assert.assertTrue(query.count() == 2);
 		
-		query = phoebe.createScanQuery(ObjectWithHashKeyAndRangeKey.class);
+		query = phoebe.createScanQuery(EntityWithHashKeyAndRangeKey.class);
 		query.field("set").contains("A");
 		Assert.assertTrue(query.count() == 2);
 		
-		query = phoebe.createScanQuery(ObjectWithHashKeyAndRangeKey.class);
+		query = phoebe.createScanQuery(EntityWithHashKeyAndRangeKey.class);
 		query.field("set").notContains("B");
 		Assert.assertTrue(query.count() == 1);
 	}
@@ -145,25 +145,25 @@ public class TestScanQuery extends TestBase {
 	@Test
 	@Ignore("test takes a lot of provisioned thru-put")
 	public void testBigEntities() {
-		List<ObjectWithHashKeyAndRangeKey> listToSave = new ArrayList<ObjectWithHashKeyAndRangeKey>();
+		List<EntityWithHashKeyAndRangeKey> listToSave = new ArrayList<EntityWithHashKeyAndRangeKey>();
 		for (int j=0; j<20; j++) {
-			ObjectWithHashKeyAndRangeKey entity = new ObjectWithHashKeyAndRangeKey();
-			entity.setId("ReallyBigEntity");
-			entity.setRangeId(String.valueOf(j));
+			EntityWithHashKeyAndRangeKey entity = new EntityWithHashKeyAndRangeKey();
+			entity.setHashKey("ReallyBigEntity");
+			entity.setRangeKey(String.valueOf(j));
 			StringBuffer sb = new StringBuffer();
 			int count = 64000/26;
 			for (int i=0; i<count; i++) {
 				sb.append("abcdefghijklmnopqrstuvwxyz");
 			}
-			entity.setFoo(sb.toString());
+			entity.setString(sb.toString());
 			listToSave.add(entity);
 		}
 		phoebe.getDatastore().put(listToSave);
 		
-		ScanQuery<ObjectWithHashKeyAndRangeKey> query = phoebe.createScanQuery(ObjectWithHashKeyAndRangeKey.class);
+		ScanQuery<EntityWithHashKeyAndRangeKey> query = phoebe.createScanQuery(EntityWithHashKeyAndRangeKey.class);
 		Assert.assertTrue(query.count() == 20);
 		
-		query = phoebe.createScanQuery(ObjectWithHashKeyAndRangeKey.class);
+		query = phoebe.createScanQuery(EntityWithHashKeyAndRangeKey.class);
 		query.limit(19);
 		Assert.assertTrue(query.count() == 19);
 	}
