@@ -40,7 +40,7 @@ public interface Datastore {
 	<T> Void delete(EntityKey<T> entityKey);
 	/** Deletes the given entities by EntityKey **/
 	<T> Iterable<DeleteResult<T>> delete(
-			Iterable<EntityKey<T>> entityKeys);
+			Iterable<? extends EntityKey<? extends T>> entityKeys);
 	/** Deletes the given entities based on the query **/
 	<T> Iterable<DeleteResult<T>> delete(
 			Query<T> query);

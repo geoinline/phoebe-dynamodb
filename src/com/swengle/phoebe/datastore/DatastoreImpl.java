@@ -116,7 +116,7 @@ public class DatastoreImpl implements Datastore {
 	 */
 	@Override
 	public <T> Iterable<DeleteResult<T>> delete(
-			Iterable<EntityKey<T>> entityKeys) {
+			Iterable<? extends EntityKey<? extends T>> entityKeys) {
 		return asyncDatastore.delete(entityKeys).now();
 	}
 
