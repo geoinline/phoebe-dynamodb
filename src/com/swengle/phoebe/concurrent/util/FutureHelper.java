@@ -7,7 +7,7 @@ import java.util.concurrent.Future;
 /**
  * This provides some of the methods of Google's (package-private) FutureHelper
  * 
- * @see com.google.appengine.api.datastore.FutureHelper
+ * See com.google.appengine.api.datastore.FutureHelper
  * 
  * @author Brian O'Connor <btoc008@gmail.com>
  */
