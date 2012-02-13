@@ -138,7 +138,8 @@ public class Phoebe {
 	}
 	
 	public <T> T marshallIntoObject(Class<T> kindClass, Map<String, AttributeValue> itemAttributes) {
-		return mapper.marshallIntoObject(kindClass, itemAttributes);
+		T entity = mapper.marshallIntoObject(kindClass, itemAttributes);
+		return entity;
 	}
 	
 	public <T> List<T> marshallIntoObjectList(Class<? extends T> kindClass,  List<Map<String, AttributeValue>> items) {
