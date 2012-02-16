@@ -3,13 +3,19 @@
  */
 package com.swengle.phoebe.query;
 
+import java.lang.reflect.Method;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import com.amazonaws.services.dynamodb.model.AttributeValue;
 import com.amazonaws.services.dynamodb.model.Key;
 import com.amazonaws.services.dynamodb.model.QueryRequest;
 import com.amazonaws.services.dynamodb.model.QueryResult;
+import com.swengle.phoebe.reflect.DynamoDBReflector;
 
 
 /**
@@ -17,8 +23,12 @@ import com.amazonaws.services.dynamodb.model.QueryResult;
  *
  */
 public class RangeQueryEntityIterator<T> implements Iterator<T> {
+	private static final Log LOG = LogFactory.getLog(RangeQueryEntityIterator.class);
+
+	
 	private RangeQueryImpl<T> rangeQuery;
 	private QueryRequest queryRequest;
+	private Collection<Method> onReadMethods;
 	private Key lastEvaluatedKey;
 	private Iterator<Map<String, AttributeValue>> iterator;
 	
@@ -28,6 +38,8 @@ public class RangeQueryEntityIterator<T> implements Iterator<T> {
 	public RangeQueryEntityIterator(RangeQueryImpl<T> rangeQuery) {
 		this.rangeQuery = rangeQuery;
 		queryRequest = rangeQuery.toQueryRequest();
+		onReadMethods = DynamoDBReflector.INSTANCE
+				.getOnReadMethods(rangeQuery.getKindClass());
 	}
 
 	/* (non-Javadoc)
@@ -51,7 +63,12 @@ public class RangeQueryEntityIterator<T> implements Iterator<T> {
 	 */
 	@Override
 	public T next() {
-		return rangeQuery.getPhoebe().marshallIntoObject(rangeQuery.getKindClass(), iterator.next());
+		T entity = rangeQuery.getPhoebe().marshallIntoObject(rangeQuery.getKindClass(), iterator.next());
+		for (Method onReadMethod : onReadMethods) {
+			DynamoDBReflector.INSTANCE.safeInvoke(onReadMethod,
+					entity);
+		}
+		return entity;
 	}
 
 	/* (non-Javadoc)
@@ -66,6 +83,11 @@ public class RangeQueryEntityIterator<T> implements Iterator<T> {
 		if (lastEvaluatedKey != null) {
 			queryRequest.setExclusiveStartKey(lastEvaluatedKey);
 		}
+		
+		if (LOG.isDebugEnabled()) {
+			LOG.debug("ScanRequest: " + queryRequest);
+		}
+		
 		QueryResult queryResult = rangeQuery.getPhoebe().getClient().query(queryRequest);
 		if (queryRequest.getLimit() != null) {
 	    	int limitToFetch = queryRequest.getLimit() - queryResult.getCount();

@@ -19,36 +19,40 @@ import com.swengle.phoebe.result.UpdateResult;
  * 
  */
 public interface Datastore {
+	/** Creates the table for the given class **/
+	<T> void createTable(Class<T> kindClass, long readCapacityUnits, long writeCapacityUnits) throws DuplicateTableException;
 	/** Deletes the given entities by hashKey and rangeKey **/
 	<T> Iterable<DeleteResult<T>> delete(Class<T> kindClass, HashKeyRangeKeyResolver hashKeyRangeKeyResolver, Iterable<String> hashKeyRangeKeys);
 	/** Deletes the given entity by hashKey and rangeKey **/
-	<T> Void delete(Class<T> kindClass, HashKeyRangeKeyResolver hashKeyRangeKeyResolver, String hashKeyRangeKey);
+	<T> void delete(Class<T> kindClass, HashKeyRangeKeyResolver hashKeyRangeKeyResolver, String hashKeyRangeKey);
 	/** Deletes the given entities by hashKey and rangeKey **/
 	<T> Iterable<DeleteResult<T>> delete(Class<T> kindClass, HashKeyRangeKeyResolver hashKeyRangeKeyResolver, String... hashKeyRangeKeys);
 	/** Deletes the given entities by hashKey **/
 	<T> Iterable<DeleteResult<T>> delete(Class<T> kindClass,
 			Iterable<? extends Object> hashKeys);
 	/** Deletes the given entity by hashKey **/
-	<T> Void delete(Class<T> kindClass, Object hashKey);
+	<T> void delete(Class<T> kindClass, Object hashKey);
 	/** Deletes the given entities by hashKey **/
 	<T> Iterable<DeleteResult<T>> delete(Class<T> kindClass,
 			Object... hashKeys);
 	/** Deletes the given entity by hashKey and rangeKey **/
-	<T> Void delete(Class<T> kindClass, Object hashKey,
+	<T> void delete(Class<T> kindClass, Object hashKey,
 			Object rangeKey);
 	/** Deletes the given entity by EntityKey **/
-	<T> Void delete(EntityKey<T> entityKey);
+	<T> void delete(EntityKey<T> entityKey);
 	/** Deletes the given entities by EntityKey **/
 	<T> Iterable<DeleteResult<T>> delete(
 			Iterable<? extends EntityKey<? extends T>> entityKeys);
 	/** Deletes the given entities based on the query **/
 	<T> Iterable<DeleteResult<T>> delete(
 			Query<T> query);
+	
+	
+	
 	/** Deletes the given entity (by EntityKey) **/
-	<T> Void delete(T entity);
-	
-	
-	
+	<T> void delete(T entity);
+	/** Drops the table for the given class **/
+	<T> void dropTable(Class<T> kindClass);
 	/** find the given entities by hashKey and rangeKey **/
 	<T> List<T> get(Class<T> kindClass, HashKeyRangeKeyResolver hashKeyRangeKeyResolver, Iterable<String> hashKeyRangeKeys);
 	/** find the given entity by hashKey and rangeKey **/
@@ -65,6 +69,7 @@ public interface Datastore {
 	/** find the given entity by hashKey and rangeKey **/
 	<T> T get(Class<T> kindClass, Object hashKey,
 			Object rangeKey);
+	
 	/** find the given entity by EntityKey **/
 	<T> T get(EntityKey<T> entityKey);
 	/** find the given entities by EntityKey **/
@@ -75,23 +80,22 @@ public interface Datastore {
 	<T> Iterable<SaveResult<T>> insert(
 			Iterable<? extends T> entities);
 	/**Save the given entity only if it does not already exist **/
-	<T> Void insert(T entity);
+	<T> void insert(T entity);
+	
 	
 	/** Save the given entities (will update if entity already exists) **/
 	<T> Iterable<SaveResult<T>> put(
 			Iterable<? extends T> entities);
 	/** Save the given entity (will update if entity already exists) **/
-	<T> Void put(T entity);
-	
+	<T> void put(T entity);
 	
 	/** Updates the given entity by EntityKey **/
 	<T> UpdateResult<T> update(EntityKey<T> entityKey, UpdateOperations<T> ops);
+
 	/** Updates the given entities by EntityKey **/
 	<T> Iterable<UpdateResult<T>> update(
 			Iterable<EntityKey<T>> entityKeys, UpdateOperations<T> ops);
-	
 	/** Updates the given entities based on the query **/
 	<T> Iterable<UpdateResult<T>> update(
 			Query<T> query, UpdateOperations<T> ops);
-
 }

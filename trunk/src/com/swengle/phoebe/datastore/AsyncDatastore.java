@@ -20,6 +20,8 @@ import com.swengle.phoebe.result.UpdateResult;
  * 
  */
 public interface AsyncDatastore {
+	/** Creates the table for the given class, if @DynamoDBTableInitialCapacities is defined that is used instead of the passed units **/
+	<T> FutureResult<Void> createTable(Class<T> kindClass, long readCapacityUnits, long writeCapacityUnits) throws DuplicateTableException;
 	/** Deletes the given entities by hashKey and rangeKey **/
 	<T> FutureResult<Iterable<DeleteResult<T>>> delete(Class<T> kindClass, HashKeyRangeKeyResolver hashKeyRangeKeyResolver, Iterable<String> hashKeyRangeKeys);
 	/** Deletes the given entity by hashKey and rangeKey **/
@@ -45,11 +47,13 @@ public interface AsyncDatastore {
 	/** Deletes the given entities based on the query **/
 	<T> FutureResult<Iterable<DeleteResult<T>>> delete(
 			Query<T> query);
+	
+	
+	
 	/** Deletes the given entity (by EntityKey) **/
 	<T> FutureResult<Void> delete(T entity);
-	
-	
-	
+	/** Drops the table for the given class **/
+	<T> FutureResult<Void> dropTable(Class<T> kindClass);
 	/** find the given entities by hashKey and rangeKey **/
 	<T> FutureResult<List<T>> get(Class<T> kindClass, HashKeyRangeKeyResolver hashKeyRangeKeyResolver, Iterable<String> hashKeyRangeKeys);
 	/** find the given entity by hashKey and rangeKey **/
@@ -68,6 +72,7 @@ public interface AsyncDatastore {
 			Object rangeKey);
 	/** find the given entity by EntityKey **/
 	<T> FutureResult<T> get(EntityKey<T> entityKey);
+	
 	/** find the given entities by EntityKey **/
 	<T> FutureResult<List<T>> get(
 			Iterable<? extends EntityKey<? extends T>> entityKeys);
@@ -80,20 +85,19 @@ public interface AsyncDatastore {
 	/**Save the given entity only if it does not already exist **/
 	<T> FutureResult<Void> insert(T entity);
 	
+	
 	/** Save the given entities (will update if entity already exists) **/
 	<T> FutureResult<Iterable<SaveResult<T>>> put(
 			Iterable<? extends T> entities);
 	/** Save the given entity (will update if entity already exists) **/
 	<T> FutureResult<Void> put(T entity);
-	
-	
 	/** Updates the given entity by EntityKey **/
 	<T> FutureResult<UpdateResult<T>> update(EntityKey<T> entityKey, UpdateOperations<T> ops);
+	
 	/** Updates the given entities by EntityKey **/
 	<T> FutureResult<Iterable<UpdateResult<T>>> update(
 			Iterable<EntityKey<T>> entityKeys, UpdateOperations<T> ops);
 	/** Updates the given entities based on the query **/
 	<T> FutureResult<Iterable<UpdateResult<T>>> update(
 			Query<T> query, UpdateOperations<T> ops);
-
 }
