@@ -16,8 +16,11 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.Callable;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.bson.types.ObjectId;
 
+import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.dynamodb.datamodeling.DynamoDBMappingException;
 import com.amazonaws.services.dynamodb.model.AttributeValue;
 import com.amazonaws.services.dynamodb.model.AttributeValueUpdate;
@@ -25,18 +28,27 @@ import com.amazonaws.services.dynamodb.model.BatchGetItemRequest;
 import com.amazonaws.services.dynamodb.model.BatchGetItemResult;
 import com.amazonaws.services.dynamodb.model.BatchResponse;
 import com.amazonaws.services.dynamodb.model.ConditionalCheckFailedException;
+import com.amazonaws.services.dynamodb.model.CreateTableRequest;
 import com.amazonaws.services.dynamodb.model.DeleteItemRequest;
 import com.amazonaws.services.dynamodb.model.DeleteItemResult;
+import com.amazonaws.services.dynamodb.model.DeleteTableRequest;
+import com.amazonaws.services.dynamodb.model.DescribeTableRequest;
 import com.amazonaws.services.dynamodb.model.ExpectedAttributeValue;
 import com.amazonaws.services.dynamodb.model.GetItemRequest;
 import com.amazonaws.services.dynamodb.model.GetItemResult;
 import com.amazonaws.services.dynamodb.model.Key;
+import com.amazonaws.services.dynamodb.model.KeySchema;
+import com.amazonaws.services.dynamodb.model.KeySchemaElement;
 import com.amazonaws.services.dynamodb.model.KeysAndAttributes;
+import com.amazonaws.services.dynamodb.model.ProvisionedThroughput;
 import com.amazonaws.services.dynamodb.model.PutItemRequest;
 import com.amazonaws.services.dynamodb.model.ReturnValue;
+import com.amazonaws.services.dynamodb.model.TableDescription;
+import com.amazonaws.services.dynamodb.model.TableStatus;
 import com.amazonaws.services.dynamodb.model.UpdateItemRequest;
 import com.amazonaws.services.dynamodb.model.UpdateItemResult;
 import com.swengle.phoebe.Phoebe;
+import com.swengle.phoebe.annotation.DynamoDBTableInitialCapacities;
 import com.swengle.phoebe.concurrent.FutureResult;
 import com.swengle.phoebe.concurrent.FutureResultAdapter;
 import com.swengle.phoebe.key.EntityKey;
@@ -55,6 +67,8 @@ import com.swengle.phoebe.result.UpdateResult;
  * 
  */
 public class AsyncDatastoreImpl implements AsyncDatastore {
+	private static final Log LOG = LogFactory.getLog(AsyncDatastoreImpl.class);
+
 	private static final class ValueUpdate {
 		private Method method;
 		private AttributeValue newValue;
@@ -243,10 +257,16 @@ public class AsyncDatastoreImpl implements AsyncDatastore {
 				updateValues = keyUpdateValues;
 			}
 			try {
-				phoebe.getClient().putItem(
-						new PutItemRequest().withTableName(tableName)
-								.withItem(convertToItem(updateValues))
-								.withExpected(expectedValues));
+				PutItemRequest putItemRequest = new PutItemRequest()
+						.withTableName(tableName)
+						.withItem(convertToItem(updateValues))
+						.withExpected(expectedValues);
+
+				if (LOG.isDebugEnabled()) {
+					LOG.debug("PutItemRequest: " + putItemRequest);
+				}
+
+				phoebe.getClient().putItem(putItemRequest);
 				runOnCreateMethods = true;
 			} catch (ConditionalCheckFailedException e) {
 				if (insert) {
@@ -262,6 +282,11 @@ public class AsyncDatastoreImpl implements AsyncDatastore {
 					.withTableName(tableName).withKey(objectKey)
 					.withAttributeUpdates(updateValues)
 					.withExpected(expectedValues);
+
+			if (LOG.isDebugEnabled()) {
+				LOG.debug("UpdateItemRequest: " + updateItemRequest);
+			}
+
 			if (onUpdateMethods.size() > 0) {
 				updateItemRequest.setReturnValues(ReturnValue.UPDATED_OLD);
 			}
@@ -297,6 +322,94 @@ public class AsyncDatastoreImpl implements AsyncDatastore {
 			}
 		}
 
+	}
+	
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * com.swengle.phoebe.datastore.AsyncDatastore#createTable(java.lang.Class,
+	 * long, long)
+	 */
+	@Override
+	public <T> FutureResult<Void> createTable(final Class<T> kindClass,
+			final long readCapacityUnits, final long writeCapacityUnits)
+			throws DuplicateTableException {
+		return new FutureResultAdapter<Void>(phoebe.getExecutorService()
+				.submit(new Callable<Void>() {
+					public Void call() throws Exception {
+						long readCapacityUnitsToSet = 0;
+						long writeCapacityUnitsToSet = 0;
+						DynamoDBTableInitialCapacities initialCapacities = DynamoDBReflector.INSTANCE.getTableInitialCapacities(kindClass);
+						if (initialCapacities != null) {
+							readCapacityUnitsToSet = initialCapacities.readCapacityUnits();
+							writeCapacityUnitsToSet = initialCapacities.writeCapacityUnits();
+						} else {
+							readCapacityUnitsToSet = readCapacityUnits;
+							writeCapacityUnitsToSet = writeCapacityUnits;
+						}
+						if (readCapacityUnitsToSet < 1) {
+							throw new IllegalStateException("readCapacityUnits must be greater than 0");
+						}
+						if (writeCapacityUnitsToSet < 1) {
+							throw new IllegalStateException("writeCapacityUnits must be greater than 0");
+						}
+						
+						String tableName = DynamoDBReflector.INSTANCE.getTable(
+								kindClass).tableName();
+						Method hashKeyGetter = DynamoDBReflector.INSTANCE
+								.getHashKeyGetter(kindClass);
+						String hashKeyAttributeName = DynamoDBReflector.INSTANCE
+								.getHashKeyAttributeName(kindClass);
+
+						KeySchemaElement hashKey = new KeySchemaElement()
+								.withAttributeName(hashKeyAttributeName)
+								.withAttributeType(getKeyType(hashKeyGetter));
+						KeySchema ks = new KeySchema()
+								.withHashKeyElement(hashKey);
+
+						Method rangeKeyGetter = DynamoDBReflector.INSTANCE
+								.getRangeKeyGetter(kindClass);
+						if (rangeKeyGetter != null) {
+							String rangeKeyAttributeName = DynamoDBReflector.INSTANCE
+									.getRangeKeyAttributeName(kindClass);
+							KeySchemaElement rangeKey = new KeySchemaElement()
+									.withAttributeName(rangeKeyAttributeName)
+									.withAttributeType(
+											getKeyType(rangeKeyGetter));
+							ks.setRangeKeyElement(rangeKey);
+						}
+
+						ProvisionedThroughput provisionedthroughput = new ProvisionedThroughput()
+								.withReadCapacityUnits(readCapacityUnitsToSet)
+								.withWriteCapacityUnits(writeCapacityUnitsToSet);
+
+						CreateTableRequest request = new CreateTableRequest()
+								.withTableName(tableName)
+								.withKeySchema(ks)
+								.withProvisionedThroughput(
+										provisionedthroughput);
+
+						if (LOG.isDebugEnabled()) {
+							LOG.debug("CreateTableRequest: " + request);
+						}
+
+						try {
+							phoebe.getClient().createTable(request);
+							waitForTableToBecomeAvailable(tableName);
+						} catch (AmazonServiceException ase) {
+							if (ase.getMessage()
+									.indexOf("Duplicate table name") == -1) {
+								throw (ase);
+							} else {
+								throw new DuplicateTableException(tableName
+										+ " already exists for: " + kindClass);
+							}
+						}
+						return null;
+					}
+				}));
 	}
 
 	/*
@@ -415,6 +528,11 @@ public class AsyncDatastoreImpl implements AsyncDatastore {
 								.withTableName(
 										entityKey.getDynamoDBTable()
 												.tableName());
+
+						if (LOG.isDebugEnabled()) {
+							LOG.debug("DeleteItemRequest: " + deleteItemRequest);
+						}
+
 						Collection<Method> onDeleteMethods = DynamoDBReflector.INSTANCE
 								.getOnDeleteMethods(entityKey.getKindClass());
 						if (onDeleteMethods.size() > 0) {
@@ -536,6 +654,41 @@ public class AsyncDatastoreImpl implements AsyncDatastore {
 	/*
 	 * (non-Javadoc)
 	 * 
+	 * @see
+	 * com.swengle.phoebe.datastore.AsyncDatastore#dropTable(java.lang.Class)
+	 */
+	@Override
+	public <T> FutureResult<Void> dropTable(final Class<T> kindClass) {
+		return new FutureResultAdapter<Void>(phoebe.getExecutorService()
+				.submit(new Callable<Void>() {
+					public Void call() throws Exception {
+						String tableName = DynamoDBReflector.INSTANCE.getTable(
+								kindClass).tableName();
+						DeleteTableRequest deleteTableRequest = new DeleteTableRequest()
+								.withTableName(tableName);
+						if (LOG.isDebugEnabled()) {
+							LOG.debug("DeleteTableRequest: "
+									+ deleteTableRequest);
+						}
+						try {
+							phoebe.getClient().deleteTable(deleteTableRequest);
+						} catch (AmazonServiceException ase) {
+							if (ase.getErrorCode().equalsIgnoreCase(
+									"ResourceNotFoundException") == false) {
+								throw ase;
+							} else {
+								return null;
+							}
+						}
+						waitForTableToBecomeDeleted(tableName);
+						return null;
+					}
+				}));
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.swengle.phoebe.datastore.AsyncDatastore#get(java.lang.Class,
 	 * com.swengle.phoebe.key.HashKeyRangeKeyResolver, java.lang.Iterable)
 	 */
@@ -648,6 +801,10 @@ public class AsyncDatastoreImpl implements AsyncDatastore {
 								.withKey(entityKey.getDynamoDBKey())
 								.withConsistentRead(consistentRead);
 
+						if (LOG.isDebugEnabled()) {
+							LOG.debug("GetItemRequest: " + getItemRequest);
+						}
+
 						GetItemResult getItemResult = phoebe.getClient()
 								.getItem(getItemRequest);
 
@@ -700,7 +857,9 @@ public class AsyncDatastoreImpl implements AsyncDatastore {
 						public List<T> call() throws Exception {
 							Map<Class<? extends T>, List<Key>> keyMap = new HashMap<Class<? extends T>, List<Key>>();
 							List<Key> keyList;
+							int size = 0;
 							for (EntityKey<? extends T> entityKey : entityKeys) {
+								size++;
 								keyList = keyMap.get(entityKey.getKindClass());
 								if (keyList == null) {
 									keyList = new ArrayList<Key>();
@@ -708,6 +867,20 @@ public class AsyncDatastoreImpl implements AsyncDatastore {
 											keyList);
 								}
 								keyList.add(entityKey.getDynamoDBKey());
+							}
+
+							if (size == 0) {
+								return new ArrayList<T>();
+							} else if (size > 50) {
+								List<FutureResult<? extends T>> futureResultList = new ArrayList<FutureResult<? extends T>>();
+								for (EntityKey<? extends T> entityKey : entityKeys) {
+									futureResultList.add(get(entityKey));
+								}
+								List<T> result = new ArrayList<T>();
+								for (FutureResult<? extends T> futureResult : futureResultList) {
+									result.add(futureResult.now());
+								}
+								return result;
 							}
 
 							Map<String, KeysAndAttributes> requestItems = new HashMap<String, KeysAndAttributes>();
@@ -730,6 +903,11 @@ public class AsyncDatastoreImpl implements AsyncDatastore {
 							do {
 								BatchGetItemRequest batchGetItemRequest = new BatchGetItemRequest()
 										.withRequestItems(requestItems);
+
+								if (LOG.isDebugEnabled()) {
+									LOG.debug("BatchGetItemRequest: "
+											+ batchGetItemRequest);
+								}
 
 								batchGetItemResult = phoebe.getClient()
 										.batchGetItem(batchGetItemRequest);
@@ -766,9 +944,11 @@ public class AsyncDatastoreImpl implements AsyncDatastore {
 								// size.
 								for (Map.Entry<String, KeysAndAttributes> pair : batchGetItemResult
 										.getUnprocessedKeys().entrySet()) {
-									System.out.println("Unprocessed key pair: "
-											+ pair.getKey() + ", "
-											+ pair.getValue());
+									if (LOG.isDebugEnabled()) {
+										LOG.debug("Unprocessed key pair: "
+												+ pair.getKey() + ", "
+												+ pair.getValue());
+									}
 								}
 								batchGetItemRequest
 										.setRequestItems(batchGetItemResult
@@ -814,6 +994,19 @@ public class AsyncDatastoreImpl implements AsyncDatastore {
 							+ ": "
 							+ returnType
 							+ ".  Only Strings are supported when auto-generating keys.");
+		}
+	}
+
+	private String getKeyType(Method method) {
+		Class<?> methodReturnType = method.getReturnType();
+		if (methodReturnType.isPrimitive()
+				|| Number.class.isAssignableFrom(methodReturnType)) {
+			return "N";
+		} else if (String.class.isAssignableFrom(methodReturnType)) {
+			return "S";
+		} else {
+			throw new DynamoDBMappingException(
+					"Hash key property must be either a Number or a String");
 		}
 	}
 
@@ -988,6 +1181,10 @@ public class AsyncDatastoreImpl implements AsyncDatastore {
 								.withAttributeUpdates(updateItems)
 								.withExpected(expected);
 
+						if (LOG.isDebugEnabled()) {
+							LOG.debug("UpdateItemRequest: " + updateItemRequest);
+						}
+
 						Collection<Method> onUpdateMethods = DynamoDBReflector.INSTANCE
 								.getOnUpdateMethods(entityKey.getKindClass());
 						if (onUpdateMethods.size() > 0) {
@@ -1010,7 +1207,8 @@ public class AsyncDatastoreImpl implements AsyncDatastore {
 							updateResult.setUpdated(true);
 						} catch (ConditionalCheckFailedException e) {
 							// ignore
-							// entity does not exist, we only updated existing entities
+							// entity does not exist, we only updated existing
+							// entities
 						} catch (Exception e) {
 							updateResult.setException(e);
 						}
@@ -1086,6 +1284,55 @@ public class AsyncDatastoreImpl implements AsyncDatastore {
 								return result;
 							}
 						}));
+	}
+
+	private void waitForTableToBecomeAvailable(String tableName) {
+		long startTime = System.currentTimeMillis();
+		long endTime = startTime + (10 * 60 * 1000);
+		while (System.currentTimeMillis() < endTime) {
+			try {
+				Thread.sleep(1000 * 5);
+			} catch (Exception e) {
+			}
+			try {
+				DescribeTableRequest request = new DescribeTableRequest()
+						.withTableName(tableName);
+				TableDescription tableDescription = phoebe.getClient()
+						.describeTable(request).getTable();
+				String tableStatus = tableDescription.getTableStatus();
+				if (tableStatus.equals(TableStatus.ACTIVE.toString()))
+					return;
+			} catch (AmazonServiceException ase) {
+				if (ase.getErrorCode().equalsIgnoreCase(
+						"ResourceNotFoundException") == false)
+					throw ase;
+			}
+		}
+		throw new RuntimeException("Table " + tableName + " never went active");
+	}
+
+	private void waitForTableToBecomeDeleted(String tableName) {
+		long startTime = System.currentTimeMillis();
+		long endTime = startTime + (10 * 60 * 1000);
+		while (System.currentTimeMillis() < endTime) {
+			try {
+				Thread.sleep(1000 * 5);
+			} catch (Exception e) {
+			}
+			try {
+				DescribeTableRequest request = new DescribeTableRequest()
+						.withTableName(tableName);
+				phoebe.getClient().describeTable(request).getTable();
+			} catch (AmazonServiceException ase) {
+				if (ase.getErrorCode().equalsIgnoreCase(
+						"ResourceNotFoundException") == false)
+					throw ase;
+				else {
+					return;
+				}
+			}
+		}
+		throw new RuntimeException("Table " + tableName + " never went deleted");
 	}
 
 }

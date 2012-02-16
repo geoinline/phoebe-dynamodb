@@ -53,10 +53,10 @@ public class DatastoreImpl implements Datastore {
 	 * @see com.swengle.phoebe.datastore.Datastore#delete(java.lang.Class, com.swengle.phoebe.key.HashKeyRangeKeyResolver, java.lang.String)
 	 */
 	@Override
-	public <T> Void delete(Class<T> kindClass,
+	public <T> void delete(Class<T> kindClass,
 			HashKeyRangeKeyResolver hashKeyRangeKeyResolver,
 			String hashKeyRangeKey) {
-		return asyncDatastore.delete(kindClass, hashKeyRangeKeyResolver, hashKeyRangeKey).now();
+		asyncDatastore.delete(kindClass, hashKeyRangeKeyResolver, hashKeyRangeKey).now();
 	}
 
 	/* (non-Javadoc)
@@ -82,8 +82,8 @@ public class DatastoreImpl implements Datastore {
 	 * @see com.swengle.phoebe.datastore.Datastore#delete(java.lang.Class, java.lang.Object)
 	 */
 	@Override
-	public <T> Void delete(Class<T> kindClass, Object hashKey) {
-		return asyncDatastore.delete(kindClass, hashKey).now();
+	public <T> void delete(Class<T> kindClass, Object hashKey) {
+		asyncDatastore.delete(kindClass, hashKey).now();
 	}
 
 	/* (non-Javadoc)
@@ -99,16 +99,16 @@ public class DatastoreImpl implements Datastore {
 	 * @see com.swengle.phoebe.datastore.Datastore#delete(java.lang.Class, java.lang.Object, java.lang.Object)
 	 */
 	@Override
-	public <T> Void delete(Class<T> kindClass, Object hashKey, Object rangeKey) {
-		return asyncDatastore.delete(kindClass, hashKey, rangeKey).now();
+	public <T> void delete(Class<T> kindClass, Object hashKey, Object rangeKey) {
+		asyncDatastore.delete(kindClass, hashKey, rangeKey).now();
 	}
 
 	/* (non-Javadoc)
 	 * @see com.swengle.phoebe.datastore.Datastore#delete(com.swengle.phoebe.key.EntityKey)
 	 */
 	@Override
-	public <T> Void delete(EntityKey<T> entityKey) {
-		return asyncDatastore.delete(entityKey).now();
+	public <T> void delete(EntityKey<T> entityKey) {
+		asyncDatastore.delete(entityKey).now();
 	}
 
 	/* (non-Javadoc)
@@ -132,8 +132,8 @@ public class DatastoreImpl implements Datastore {
 	 * @see com.swengle.phoebe.datastore.Datastore#delete(java.lang.Object)
 	 */
 	@Override
-	public <T> Void delete(T entity) {
-		return asyncDatastore.delete(entity).now();
+	public <T> void delete(T entity) {
+		asyncDatastore.delete(entity).now();
 	}
 
 	/* (non-Javadoc)
@@ -229,8 +229,8 @@ public class DatastoreImpl implements Datastore {
 	 * @see com.swengle.phoebe.datastore.Datastore#insert(java.lang.Object)
 	 */
 	@Override
-	public <T> Void insert(T entity) {
-		return asyncDatastore.insert(entity).now();
+	public <T> void insert(T entity) {
+		asyncDatastore.insert(entity).now();
 	}
 
 	/* (non-Javadoc)
@@ -245,8 +245,8 @@ public class DatastoreImpl implements Datastore {
 	 * @see com.swengle.phoebe.datastore.Datastore#put(java.lang.Object)
 	 */
 	@Override
-	public <T> Void put(T entity) {
-		return asyncDatastore.put(entity).now();
+	public <T> void put(T entity) {
+		asyncDatastore.put(entity).now();
 	}
 
 	/* (non-Javadoc)
@@ -277,4 +277,22 @@ public class DatastoreImpl implements Datastore {
 		return asyncDatastore.update(query, ops).now();
 	}
 
+	/* (non-Javadoc)
+	 * @see com.swengle.phoebe.datastore.Datastore#createTable(java.lang.Class, long, long)
+	 */
+	@Override
+	public <T> void createTable(Class<T> kindClass, long readCapacityUnits,
+			long writeCapacityUnits) throws DuplicateTableException {
+		asyncDatastore.createTable(kindClass, readCapacityUnits, writeCapacityUnits).now();
+	}
+
+	/* (non-Javadoc)
+	 * @see com.swengle.phoebe.datastore.Datastore#dropTable(java.lang.Class)
+	 */
+	@Override
+	public <T> void dropTable(Class<T> kindClass) {
+		asyncDatastore.dropTable(kindClass).now();
+	}
+
+	
 }

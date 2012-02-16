@@ -46,6 +46,7 @@ import com.amazonaws.services.dynamodb.datamodeling.DynamoDBTable;
 import com.amazonaws.services.dynamodb.datamodeling.DynamoDBVersionAttribute;
 import com.amazonaws.services.dynamodb.model.AttributeValue;
 import com.amazonaws.util.DateUtils;
+import com.swengle.phoebe.annotation.DynamoDBTableInitialCapacities;
 import com.swengle.phoebe.annotation.OnDelete;
 import com.swengle.phoebe.annotation.OnRead;
 import com.swengle.phoebe.annotation.OnCreate;
@@ -1337,6 +1338,11 @@ public class DynamoDBReflector {
 			}
 
 		}
+	}
+	
+
+	public <T> DynamoDBTableInitialCapacities getTableInitialCapacities(Class<T> clazz) {
+		return clazz.getAnnotation(DynamoDBTableInitialCapacities.class);
 	}
 
 }
