@@ -20,6 +20,7 @@ import com.swengle.phoebe.reflect.DynamoDBReflector.MarshallerType;
  */
 public class RangeQueryImpl<T> extends QueryImpl<T> implements RangeQuery<T>  {
 	private int limit;
+	private boolean directionForward = true;
 	private ExclusiveStartKeyImpl<RangeQuery<T>> exclusiveStartKey;
 	private RangeConditionImpl<RangeQuery<T>> rangeCondition;
 	private AttributeValue hashKeyAttributeValue;
@@ -141,6 +142,17 @@ public class RangeQueryImpl<T> extends QueryImpl<T> implements RangeQuery<T>  {
 		this.limit = limit;
 		return this;
 	}
+	
+	
+
+	/* (non-Javadoc)
+	 * @see com.swengle.phoebe.query.RangeQuery#directionForward(boolean)
+	 */
+	@Override
+	public RangeQuery<T> directionForward(boolean directionForward) {
+		this.directionForward = directionForward;
+		return this;
+	}
 
 	/* (non-Javadoc)
 	 * @see com.phoebe.dynamodb.datastore.query.RangeQuery2#range()
@@ -169,6 +181,7 @@ public class RangeQueryImpl<T> extends QueryImpl<T> implements RangeQuery<T>  {
 	public QueryRequest toQueryRequest() {
 		QueryRequest queryRequest = new QueryRequest().withTableName(tableName).withHashKeyValue(hashKeyAttributeValue);
 		queryRequest.withConsistentRead(consistentRead);
+		queryRequest.withScanIndexForward(directionForward);
 		if (limit > 0) {
 			queryRequest.withLimit(limit);
 		}
@@ -183,8 +196,6 @@ public class RangeQueryImpl<T> extends QueryImpl<T> implements RangeQuery<T>  {
 		}
 
 		return queryRequest;
-	}
-	
-	
+	}	
 
 }
