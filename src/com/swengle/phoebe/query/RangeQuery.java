@@ -19,4 +19,9 @@ public interface RangeQuery<T> extends Query<T> {
 	 * Exclusive start key from which to resume the query.
 	 */
 	ExclusiveStartKey<RangeQuery<T>> withExclusiveStartKey();
+	
+	/**
+	 * Whether to scan the index forward (default true) or backward
+	 */
+	RangeQuery<T> directionForward(boolean directionForward);
 }

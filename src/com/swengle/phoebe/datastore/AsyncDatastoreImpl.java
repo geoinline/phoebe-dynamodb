@@ -117,6 +117,7 @@ public class AsyncDatastoreImpl implements AsyncDatastore {
 	}
 
 	private <T extends Object> void create(T entity, boolean insert) {
+		LOG.debug(entity);
 		Map<String, AttributeValueUpdate> updateValues = new HashMap<String, AttributeValueUpdate>();
 		Map<String, AttributeValueUpdate> keyUpdateValues = new HashMap<String, AttributeValueUpdate>();
 		Map<String, ExpectedAttributeValue> expectedValues = new HashMap<String, ExpectedAttributeValue>();
@@ -844,9 +845,16 @@ public class AsyncDatastoreImpl implements AsyncDatastore {
 							for (EntityKey<? extends T> entityKey : entityKeys) {
 								futureResultList.add(get(entityKey));
 							}
-							List<T> result = new ArrayList<T>();
+							Map<EntityKey<? extends T>, T> entityMap = new HashMap<EntityKey<? extends T>, T>();
+							
+							T entity;
 							for (FutureResult<? extends T> futureResult : futureResultList) {
-								result.add(futureResult.now());
+								entity = futureResult.now();
+								entityMap.put(EntityKey.create(entity), entity);
+							}
+							List<T> result = new ArrayList<T>();
+							for (EntityKey<? extends T> entityKey : entityKeys) {
+								result.add(entityMap.get(entityKey));
 							}
 							return result;
 						}
@@ -876,87 +884,101 @@ public class AsyncDatastoreImpl implements AsyncDatastore {
 								for (EntityKey<? extends T> entityKey : entityKeys) {
 									futureResultList.add(get(entityKey));
 								}
-								List<T> result = new ArrayList<T>();
+								Map<EntityKey<? extends T>, T> entityMap = new HashMap<EntityKey<? extends T>, T>();
+								
+								T entity;
 								for (FutureResult<? extends T> futureResult : futureResultList) {
-									result.add(futureResult.now());
+									entity = futureResult.now();
+									entityMap.put(EntityKey.create(entity), entity);
+								}
+								List<T> result = new ArrayList<T>();
+								for (EntityKey<? extends T> entityKey : entityKeys) {
+									result.add(entityMap.get(entityKey));
+								}
+								return result;
+							} else {
+								Map<String, KeysAndAttributes> requestItems = new HashMap<String, KeysAndAttributes>();
+								Iterator<Entry<Class<? extends T>, List<Key>>> it = keyMap
+										.entrySet().iterator();
+								Entry<Class<? extends T>, List<Key>> entry;
+								while (it.hasNext()) {
+									entry = it.next();
+									requestItems.put(DynamoDBReflector.INSTANCE
+											.getTable(entry.getKey()).tableName(),
+											new KeysAndAttributes().withKeys(entry
+													.getValue()));
+								}
+	
+								BatchGetItemResult batchGetItemResult;
+								String tableName;
+								T entity;
+								Class<? extends T> kindClass;
+								Map<EntityKey<? extends T>, T> entityMap = new HashMap<EntityKey<? extends T>, T>();
+								do {
+									BatchGetItemRequest batchGetItemRequest = new BatchGetItemRequest()
+											.withRequestItems(requestItems);
+	
+									if (LOG.isDebugEnabled()) {
+										LOG.debug("BatchGetItemRequest: "
+												+ batchGetItemRequest);
+									}
+	
+									batchGetItemResult = phoebe.getClient()
+											.batchGetItem(batchGetItemRequest);
+	
+									Iterator<Class<? extends T>> classIterator = keyMap
+											.keySet().iterator();
+									while (classIterator.hasNext()) {
+										kindClass = classIterator.next();
+										tableName = DynamoDBReflector.INSTANCE
+												.getTable(kindClass).tableName();
+										BatchResponse batchResponse = batchGetItemResult
+												.getResponses().get(tableName);
+										
+										for (Map<String, AttributeValue> item : batchResponse
+												.getItems()) {
+											entity = phoebe.marshallIntoObject(
+													kindClass, item);
+											Collection<Method> onReadMethods = DynamoDBReflector.INSTANCE
+													.getOnReadMethods(entity
+															.getClass());
+											for (Method onReadMethod : onReadMethods) {
+												DynamoDBReflector.INSTANCE
+														.safeInvoke(onReadMethod,
+																entity);
+											}
+											entityMap.put(EntityKey.create(entity), entity);
+										}
+									}
+	
+									// Check for unprocessed keys which could happen
+									// if
+									// you exceed
+									// provisioned
+									// throughput or reach the limit on response
+									// size.
+									for (Map.Entry<String, KeysAndAttributes> pair : batchGetItemResult
+											.getUnprocessedKeys().entrySet()) {
+										if (LOG.isDebugEnabled()) {
+											LOG.debug("Unprocessed key pair: "
+													+ pair.getKey() + ", "
+													+ pair.getValue());
+										}
+									}
+									batchGetItemRequest
+											.setRequestItems(batchGetItemResult
+													.getUnprocessedKeys());
+								} while (batchGetItemResult.getUnprocessedKeys()
+										.size() > 0);
+	
+								List<T> result = new ArrayList<T>();
+								for (EntityKey<? extends T> entityKey : entityKeys) {
+									if (entityMap.containsKey(entityKey)) {
+										result.add(entityMap.get(entityKey));
+									}
 								}
 								return result;
 							}
-
-							Map<String, KeysAndAttributes> requestItems = new HashMap<String, KeysAndAttributes>();
-							Iterator<Entry<Class<? extends T>, List<Key>>> it = keyMap
-									.entrySet().iterator();
-							Entry<Class<? extends T>, List<Key>> entry;
-							while (it.hasNext()) {
-								entry = it.next();
-								requestItems.put(DynamoDBReflector.INSTANCE
-										.getTable(entry.getKey()).tableName(),
-										new KeysAndAttributes().withKeys(entry
-												.getValue()));
-							}
-
-							BatchGetItemResult batchGetItemResult;
-							String tableName;
-							T entity;
-							Class<? extends T> kindClass;
-							List<T> result = new ArrayList<T>();
-							do {
-								BatchGetItemRequest batchGetItemRequest = new BatchGetItemRequest()
-										.withRequestItems(requestItems);
-
-								if (LOG.isDebugEnabled()) {
-									LOG.debug("BatchGetItemRequest: "
-											+ batchGetItemRequest);
-								}
-
-								batchGetItemResult = phoebe.getClient()
-										.batchGetItem(batchGetItemRequest);
-
-								Iterator<Class<? extends T>> classIterator = keyMap
-										.keySet().iterator();
-								while (classIterator.hasNext()) {
-									kindClass = classIterator.next();
-									tableName = DynamoDBReflector.INSTANCE
-											.getTable(kindClass).tableName();
-									BatchResponse batchResponse = batchGetItemResult
-											.getResponses().get(tableName);
-									for (Map<String, AttributeValue> item : batchResponse
-											.getItems()) {
-										entity = phoebe.marshallIntoObject(
-												kindClass, item);
-										Collection<Method> onReadMethods = DynamoDBReflector.INSTANCE
-												.getOnReadMethods(entity
-														.getClass());
-										for (Method onReadMethod : onReadMethods) {
-											DynamoDBReflector.INSTANCE
-													.safeInvoke(onReadMethod,
-															entity);
-										}
-										result.add(entity);
-									}
-								}
-
-								// Check for unprocessed keys which could happen
-								// if
-								// you exceed
-								// provisioned
-								// throughput or reach the limit on response
-								// size.
-								for (Map.Entry<String, KeysAndAttributes> pair : batchGetItemResult
-										.getUnprocessedKeys().entrySet()) {
-									if (LOG.isDebugEnabled()) {
-										LOG.debug("Unprocessed key pair: "
-												+ pair.getKey() + ", "
-												+ pair.getValue());
-									}
-								}
-								batchGetItemRequest
-										.setRequestItems(batchGetItemResult
-												.getUnprocessedKeys());
-							} while (batchGetItemResult.getUnprocessedKeys()
-									.size() > 0);
-
-							return result;
 						}
 					}));
 		}
