@@ -36,10 +36,19 @@ public class Phoebe {
 	private AmazonDynamoDB client;
 	private DynamoDBMapper mapper;
 	private ExecutorService executorService;
-	private Datastore datastore;
-	private AsyncDatastore asyncDatastore;
-	private Datastore consistentReadDatastore;
-	private AsyncDatastore consistentReadAsyncDatastore;
+	
+	private Datastore datastoreNotConsistentNotLifecycleEnabled;
+	private AsyncDatastore asyncDatastoreNotConsistentNotLifecycleEnabled;
+	
+	private Datastore datastoreNotConsistentIsLifecycleEnabled;
+	private AsyncDatastore asyncDatastoreNotConsistentIsLifecycleEnabled;
+	
+	private Datastore datastoreIsConsistentNotLifecycleEnabled;
+	private AsyncDatastore asyncDatastoreIsConsistentNotLifecycleEnabled;
+
+	private Datastore datastoreIsConsistentIsLifecycleEnabled;
+	private AsyncDatastore asyncDatastoreIsConsistentIsLifecycleEnabled;
+	
 	
 	/**
 	 * 
@@ -72,10 +81,18 @@ public class Phoebe {
 					clientConfiguration);
 		mapper = new DynamoDBMapper(client);
 		executorService = Executors.newCachedThreadPool();
-		asyncDatastore = new AsyncDatastoreImpl(this);
-		consistentReadAsyncDatastore = new AsyncDatastoreImpl(this, true); 
-		datastore = new DatastoreImpl(this);
-		consistentReadDatastore = new DatastoreImpl(this, true);
+		
+		asyncDatastoreNotConsistentNotLifecycleEnabled = new AsyncDatastoreImpl(this, false, false);
+		datastoreNotConsistentNotLifecycleEnabled = new DatastoreImpl(asyncDatastoreNotConsistentNotLifecycleEnabled);
+		
+		asyncDatastoreNotConsistentIsLifecycleEnabled = new AsyncDatastoreImpl(this, false, true);
+		datastoreNotConsistentIsLifecycleEnabled = new DatastoreImpl(asyncDatastoreNotConsistentIsLifecycleEnabled);
+		
+		asyncDatastoreIsConsistentNotLifecycleEnabled = new AsyncDatastoreImpl(this, true, false);
+		datastoreIsConsistentNotLifecycleEnabled = new DatastoreImpl(asyncDatastoreIsConsistentNotLifecycleEnabled);
+		
+		asyncDatastoreIsConsistentIsLifecycleEnabled = new AsyncDatastoreImpl(this, true, true); 
+		datastoreIsConsistentIsLifecycleEnabled = new DatastoreImpl(asyncDatastoreIsConsistentIsLifecycleEnabled);
 	}
 
 	/**
@@ -110,7 +127,22 @@ public class Phoebe {
 	 * @return the datastore
 	 */
 	public Datastore getDatastore() {
-		return datastore;
+		return getDatastore(false, true);
+	}
+	
+	public Datastore getDatastore(boolean consistentRead) {
+		return getDatastore(consistentRead, true);
+	}
+
+	public Datastore getDatastore(boolean consistentRead, boolean lifecycleEnabled) {
+		if (!consistentRead && !lifecycleEnabled) {
+			return datastoreNotConsistentNotLifecycleEnabled;
+		} else if (!consistentRead && lifecycleEnabled) {
+			return datastoreNotConsistentIsLifecycleEnabled;
+		} else if (consistentRead && !lifecycleEnabled) {
+			return datastoreIsConsistentNotLifecycleEnabled;
+		}
+		return datastoreIsConsistentIsLifecycleEnabled;
 	}
 
 
@@ -118,7 +150,22 @@ public class Phoebe {
 	 * @return the asyncDatastore
 	 */
 	public AsyncDatastore getAsyncDatastore() {
-		return asyncDatastore;
+		return getAsyncDatastore(false, true);
+	}
+	
+	public AsyncDatastore getAsyncDatastore(boolean consistentRead) {
+		return getAsyncDatastore(consistentRead, true);
+	}
+
+	public AsyncDatastore getAsyncDatastore(boolean consistentRead, boolean lifecycleEnabled) {
+		if (!consistentRead && !lifecycleEnabled) {
+			return asyncDatastoreNotConsistentNotLifecycleEnabled;
+		} else if (!consistentRead && lifecycleEnabled) {
+			return asyncDatastoreNotConsistentIsLifecycleEnabled;
+		} else if (consistentRead && !lifecycleEnabled) {
+			return asyncDatastoreIsConsistentNotLifecycleEnabled;
+		}
+		return asyncDatastoreIsConsistentIsLifecycleEnabled;
 	}
 	
 	public <T> ScanQuery<T> createScanQuery(Class<T> kindClass) {
@@ -149,22 +196,6 @@ public class Phoebe {
 		}
 		return objList;
 	}
-
-	/**
-	 * @return the consistentReadDatastore
-	 */
-	public Datastore getConsistentReadDatastore() {
-		return consistentReadDatastore;
-	}
-
-
-	/**
-	 * @return the consistentReadAyncDatastore
-	 */
-	public AsyncDatastore getConsistentReadAsyncDatastore() {
-		return consistentReadAsyncDatastore;
-	}
-
 
 
 }

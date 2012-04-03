@@ -49,7 +49,7 @@ public class TestLifecycle extends TestBase {
 		Assert.assertTrue(entity.isCreated() == false);
 		Assert.assertTrue(!deletedEntityHashKeys.contains(entity.getHashKey()));
 		Assert.assertTrue(entity.isRead() == false);
-		Assert.assertTrue(updatedEntityHashKeys.contains(entity.getHashKey()));
+		Assert.assertTrue(!updatedEntityHashKeys.contains(entity.getHashKey()));
 		updatedEntityHashKeys.clear();
 		
 		entity = phoebe.getDatastore().get(EntityWithJustHashKeyAndLifecycleMethods.class, entity.getHashKey());
