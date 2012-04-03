@@ -16,12 +16,12 @@
     <property name="bin"        location="bin"/>
     <property name="dist"       location="dist"/>
 	<property name="lib"        location="lib"/>
-	<property name="aws_sdk"    location="../.metadata/.plugins/com.amazonaws.eclipse.sdk/SDK/1.3.2"/>
+	<property name="aws_sdk"    location="../.metadata/.plugins/com.amazonaws.eclipse.sdk/SDK/1.3.6"/>
 
 
     <!-- classpath used for building this library -->
     <path id="phoebe.build.path">
-        <pathelement location="${aws_sdk}/lib/aws-java-sdk-1.3.2.jar"/>
+        <pathelement location="${aws_sdk}/lib/aws-java-sdk-1.3.6.jar"/>
     	<pathelement location="${aws_sdk}/third-party/commons-logging-1.1.1/commons-logging-1.1.1.jar"/>
     	<pathelement location="${lib}/commons-lang3-3.1.jar"/>
     </path>
