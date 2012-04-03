@@ -5,9 +5,9 @@ package com.swengle.phoebe.key;
 
 import java.lang.reflect.Method;
 
-import org.apache.commons.lang.builder.CompareToBuilder;
-import org.apache.commons.lang.builder.EqualsBuilder;
-import org.apache.commons.lang.builder.HashCodeBuilder;
+import org.apache.commons.lang3.builder.CompareToBuilder;
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
 
 import com.amazonaws.services.dynamodb.datamodeling.DynamoDBTable;
 import com.amazonaws.services.dynamodb.model.AttributeValue;
@@ -61,7 +61,7 @@ public class EntityKey<T> implements Comparable<EntityKey<T>> {
 	public static <T> EntityKey<T> create(Class<T> kindClass,
 			HashKeyRangeKeyResolver hashKeyRangeKeyResolver, String hashKeyRangeKey) {
 		String[] keys = hashKeyRangeKeyResolver.split(hashKeyRangeKey);
-		if (keys.length != 1 || keys.length != 2) {
+		if (keys.length != 1 && keys.length != 2) {
 			throw new InvalidEntityKeyException("Given HashKeyRangeKeyResolver should return a string array of length 1 or 2");
 		}
 		if (keys.length == 1) {

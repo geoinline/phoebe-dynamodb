@@ -82,20 +82,16 @@ public class AsyncDatastoreImpl implements AsyncDatastore {
 	private Phoebe phoebe;
 
 	private boolean consistentRead;
+	private boolean lifecycleEnabled;
 
+	
 	/**
 	 * Create a new AsyncDatastoreImpl object
 	 */
-	public AsyncDatastoreImpl(Phoebe phoebe) {
-		this(phoebe, false);
-	}
-
-	/**
-	 * Create a new AsyncDatastoreImpl object
-	 */
-	public AsyncDatastoreImpl(Phoebe phoebe, boolean consistentRead) {
+	public AsyncDatastoreImpl(Phoebe phoebe, boolean consistentRead, boolean lifecycleEnabled) {
 		this.phoebe = phoebe;
 		this.consistentRead = consistentRead;
+		this.lifecycleEnabled = lifecycleEnabled;
 	}
 
 	/**
@@ -117,7 +113,6 @@ public class AsyncDatastoreImpl implements AsyncDatastore {
 	}
 
 	private <T extends Object> void create(T entity, boolean insert) {
-		LOG.debug(entity);
 		Map<String, AttributeValueUpdate> updateValues = new HashMap<String, AttributeValueUpdate>();
 		Map<String, AttributeValueUpdate> keyUpdateValues = new HashMap<String, AttributeValueUpdate>();
 		Map<String, ExpectedAttributeValue> expectedValues = new HashMap<String, ExpectedAttributeValue>();
@@ -244,8 +239,6 @@ public class AsyncDatastoreImpl implements AsyncDatastore {
 		boolean runOnCreateMethods = false;
 		boolean runOnUpdateMethods = false;
 
-		Collection<Method> onUpdateMethods = DynamoDBReflector.INSTANCE
-				.getOnUpdateMethods(entity.getClass());
 
 		// check if updateValues is empty to work around the
 		// odd case where DynamoDB does not create an entity
@@ -266,16 +259,18 @@ public class AsyncDatastoreImpl implements AsyncDatastore {
 				if (LOG.isDebugEnabled()) {
 					LOG.debug("PutItemRequest: " + putItemRequest);
 				}
+				
+				LOG.info("PutItemRequest: " + putItemRequest);
 
 				phoebe.getClient().putItem(putItemRequest);
-				runOnCreateMethods = true;
+				if (lifecycleEnabled) {
+					runOnCreateMethods = true;
+				}
 			} catch (ConditionalCheckFailedException e) {
 				if (insert) {
 					throw new DuplicateEntityException(
 							"Entity already exists with key: "
 									+ objectKey.toString());
-				} else {
-					runOnUpdateMethods = true;
 				}
 			}
 		} else {
@@ -288,17 +283,16 @@ public class AsyncDatastoreImpl implements AsyncDatastore {
 				LOG.debug("UpdateItemRequest: " + updateItemRequest);
 			}
 
-			if (onUpdateMethods.size() > 0) {
-				updateItemRequest.setReturnValues(ReturnValue.UPDATED_OLD);
-			}
+			updateItemRequest.setReturnValues(ReturnValue.UPDATED_OLD);
 
 			UpdateItemResult updateItemResult = phoebe.getClient().updateItem(
 					updateItemRequest);
-			if (onUpdateMethods.size() > 0
-					&& updateItemResult.getAttributes() != null) {
-				runOnUpdateMethods = true;
-			} else {
-				runOnCreateMethods = true;
+			if (lifecycleEnabled) {
+				if (updateItemResult.getAttributes() != null) {
+					runOnUpdateMethods = true;
+				} else {
+					runOnCreateMethods = true;
+				}
 			}
 		}
 
@@ -318,6 +312,8 @@ public class AsyncDatastoreImpl implements AsyncDatastore {
 			}
 
 		} else if (runOnUpdateMethods) {
+			Collection<Method> onUpdateMethods = DynamoDBReflector.INSTANCE
+						.getOnUpdateMethods(entity.getClass());
 			for (Method onUpdateMethod : onUpdateMethods) {
 				DynamoDBReflector.INSTANCE.safeInvoke(onUpdateMethod, entity);
 			}
@@ -534,16 +530,18 @@ public class AsyncDatastoreImpl implements AsyncDatastore {
 							LOG.debug("DeleteItemRequest: " + deleteItemRequest);
 						}
 
-						Collection<Method> onDeleteMethods = DynamoDBReflector.INSTANCE
-								.getOnDeleteMethods(entityKey.getKindClass());
-						if (onDeleteMethods.size() > 0) {
-							deleteItemRequest
-									.setReturnValues(ReturnValue.ALL_OLD);
+						Collection<Method> onDeleteMethods = null;
+						if (lifecycleEnabled) {
+							onDeleteMethods = DynamoDBReflector.INSTANCE
+									.getOnDeleteMethods(entityKey.getKindClass());
+							if (onDeleteMethods.size() > 0) {
+								deleteItemRequest
+										.setReturnValues(ReturnValue.ALL_OLD);
+							}
 						}
 						DeleteItemResult deleteItemResult = phoebe.getClient()
 								.deleteItem(deleteItemRequest);
-						if (deleteItemResult.getAttributes() != null
-								&& onDeleteMethods.size() > 0) {
+						if (onDeleteMethods != null && onDeleteMethods.size() > 0 && deleteItemResult.getAttributes() != null) {
 							T entity = phoebe.marshallIntoObject(
 									entityKey.getKindClass(),
 									deleteItemResult.getAttributes());
@@ -817,11 +815,13 @@ public class AsyncDatastoreImpl implements AsyncDatastore {
 								entityKey.getKindClass(),
 								getItemResult.getItem());
 
-						Collection<Method> onReadMethods = DynamoDBReflector.INSTANCE
-								.getOnReadMethods(entity.getClass());
-						for (Method onReadMethod : onReadMethods) {
-							DynamoDBReflector.INSTANCE.safeInvoke(onReadMethod,
-									entity);
+						if (lifecycleEnabled) {
+							Collection<Method> onReadMethods = DynamoDBReflector.INSTANCE
+									.getOnReadMethods(entity.getClass());
+							for (Method onReadMethod : onReadMethods) {
+								DynamoDBReflector.INSTANCE.safeInvoke(onReadMethod,
+										entity);
+							}
 						}
 
 						return entity;
@@ -939,13 +939,15 @@ public class AsyncDatastoreImpl implements AsyncDatastore {
 												.getItems()) {
 											entity = phoebe.marshallIntoObject(
 													kindClass, item);
-											Collection<Method> onReadMethods = DynamoDBReflector.INSTANCE
-													.getOnReadMethods(entity
-															.getClass());
-											for (Method onReadMethod : onReadMethods) {
-												DynamoDBReflector.INSTANCE
-														.safeInvoke(onReadMethod,
-																entity);
+											if (lifecycleEnabled) {
+												Collection<Method> onReadMethods = DynamoDBReflector.INSTANCE
+														.getOnReadMethods(entity
+																.getClass());
+												for (Method onReadMethod : onReadMethods) {
+													DynamoDBReflector.INSTANCE
+															.safeInvoke(onReadMethod,
+																	entity);
+												}
 											}
 											entityMap.put(EntityKey.create(entity), entity);
 										}
@@ -1207,17 +1209,20 @@ public class AsyncDatastoreImpl implements AsyncDatastore {
 							LOG.debug("UpdateItemRequest: " + updateItemRequest);
 						}
 
-						Collection<Method> onUpdateMethods = DynamoDBReflector.INSTANCE
-								.getOnUpdateMethods(entityKey.getKindClass());
-						if (onUpdateMethods.size() > 0) {
-							updateItemRequest
-									.setReturnValues(ReturnValue.ALL_NEW);
+						Collection<Method> onUpdateMethods = null;
+						if (lifecycleEnabled) {
+							onUpdateMethods = DynamoDBReflector.INSTANCE
+									.getOnUpdateMethods(entityKey.getKindClass());
+							if (onUpdateMethods.size() > 0) {
+								updateItemRequest
+										.setReturnValues(ReturnValue.ALL_NEW);
+							}
 						}
 
 						try {
 							UpdateItemResult updateItemResult = phoebe
 									.getClient().updateItem(updateItemRequest);
-							if (onUpdateMethods.size() > 0) {
+							if (onUpdateMethods != null && onUpdateMethods.size() > 0) {
 								T entity = phoebe.marshallIntoObject(
 										entityKey.getKindClass(),
 										updateItemResult.getAttributes());
@@ -1355,6 +1360,20 @@ public class AsyncDatastoreImpl implements AsyncDatastore {
 			}
 		}
 		throw new RuntimeException("Table " + tableName + " never went deleted");
+	}
+
+	/**
+	 * @return the lifecycleEnabled
+	 */
+	public boolean isLifecycleEnabled() {
+		return lifecycleEnabled;
+	}
+
+	/**
+	 * @param lifecycleEnabled the lifecycleEnabled to set
+	 */
+	public void setLifecycleEnabled(boolean lifecycleEnabled) {
+		this.lifecycleEnabled = lifecycleEnabled;
 	}
 
 }

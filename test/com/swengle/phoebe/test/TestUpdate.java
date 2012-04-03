@@ -28,7 +28,7 @@ public class TestUpdate extends TestBase {
 	private static final String TOP_RANGE_ID = new ObjectId().toString();
 	private static final String MIDDLE_RANGE_ID = new ObjectId().toString();
 	private Phoebe phoebe = TestBase.PHOEBE;
-	private Datastore datastore = TestBase.PHOEBE.getConsistentReadDatastore();
+	private Datastore datastore = TestBase.PHOEBE.getDatastore(true);
 
 	@Test
 	public void testUpdating() {

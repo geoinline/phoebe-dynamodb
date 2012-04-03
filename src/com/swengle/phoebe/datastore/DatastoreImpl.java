@@ -5,7 +5,6 @@ package com.swengle.phoebe.datastore;
 
 import java.util.List;
 
-import com.swengle.phoebe.Phoebe;
 import com.swengle.phoebe.key.EntityKey;
 import com.swengle.phoebe.key.HashKeyRangeKeyResolver;
 import com.swengle.phoebe.query.Query;
@@ -24,19 +23,8 @@ public class DatastoreImpl implements Datastore {
 	/**
 	 * Create a new DatastoreImpl object
 	 */
-	public DatastoreImpl(Phoebe phoebe) {
-		this(phoebe, false);
-	}
-
-	/**
-	 * Create a new DatastoreImpl object
-	 */
-	public DatastoreImpl(Phoebe phoebe, boolean consistentRead) {
-		if (consistentRead) {
-			asyncDatastore = phoebe.getConsistentReadAsyncDatastore();
-		} else {
-			asyncDatastore = phoebe.getAsyncDatastore();
-		}
+	public DatastoreImpl(AsyncDatastore asyncDatastore) {
+		this.asyncDatastore = asyncDatastore;
 	}
 	
 	/* (non-Javadoc)
